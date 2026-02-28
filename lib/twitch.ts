@@ -4,7 +4,7 @@ const TWITCH_API = "https://api.twitch.tv/helix";
 const TOKEN_URL = "https://id.twitch.tv/oauth2/token";
 
 const TOKEN_KEY = "twitch:app_token";
-const TOKEN_EXP_KEY = "twitch:app_token_exp";
+const TOKEN_EXP_KEY = "twitch:app_token_exp"; // epoch ms
 
 function mustEnv(name: string) {
   const v = process.env[name];
