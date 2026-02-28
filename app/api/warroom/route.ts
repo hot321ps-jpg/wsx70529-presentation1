@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { kv } from "@vercel/kv";
-import type { WarroomPayload } from "@/lib/types";
+import type { WarroomPayload } from "../../../lib/types";
 
 const KEY = "warroom:latest";
 export const runtime = "nodejs";
