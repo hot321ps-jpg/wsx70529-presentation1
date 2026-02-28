@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { WarroomPayload } from "@/lib/types";
+import type { WarroomPayload } from "../lib/types";
 
 type ConnStatus = "connecting" | "live" | "degraded" | "error";
 
@@ -40,7 +40,7 @@ export default function Page() {
   const refreshRetry = useRef(0);
   const refreshTimer = useRef<number | null>(null);
 
-  // 1) 前端主動 refresh（Hobby 核心）
+  // 1) 前端主動 refresh（Hobby 免 Cron）
   useEffect(() => {
     let stopped = false;
 
@@ -51,6 +51,7 @@ export default function Page() {
 
     const loop = async () => {
       if (stopped) return;
+
       try {
         const res = await fetch("/api/warroom-refresh", { cache: "no-store" });
         if (!res.ok) {
@@ -69,6 +70,7 @@ export default function Page() {
     };
 
     loop();
+
     return () => {
       stopped = true;
       if (refreshTimer.current) window.clearTimeout(refreshTimer.current);
@@ -123,8 +125,8 @@ export default function Page() {
   const viewers = data?.live?.viewerCount ?? data?.kpis?.viewersNow ?? null;
   const title = data?.live?.title ?? "-";
   const game = data?.live?.gameName ?? "-";
-
   const trend = data?.trend30d ?? [];
+
   const trendStats = useMemo(() => {
     if (!trend.length) return { min: 0, max: 1 };
     const vals = trend.map((t) => t.value);
@@ -137,9 +139,7 @@ export default function Page() {
         <div className="mb-6 flex items-end justify-between gap-4">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">wsx70529 即時戰情室</h1>
-            <p className="mt-1 text-sm text-neutral-400">
-              Twitch 真資料（KV 快取 + 去重鎖 + SSE 推送 + Hobby 前端刷新）
-            </p>
+            <p className="mt-1 text-sm text-neutral-400">Twitch 真資料（KV + 去重鎖 + SSE + Hobby 前端刷新）</p>
           </div>
           <span className={`rounded-full px-2 py-1 text-xs ${pillClass(status)}`}>{pillLabel(status)}</span>
         </div>
@@ -192,11 +192,7 @@ export default function Page() {
                 const h = clamp(Math.round(t * 100), 8, 100);
                 return (
                   <div key={p.date} className="flex-1">
-                    <div
-                      className="w-full rounded-md bg-white/20"
-                      style={{ height: `${h}%` }}
-                      title={`${p.date}: ${p.value}`}
-                    />
+                    <div className="w-full rounded-md bg-white/20" style={{ height: `${h}%` }} title={`${p.date}: ${p.value}`} />
                   </div>
                 );
               })}
@@ -222,9 +218,7 @@ export default function Page() {
                   <div className="mt-2 text-[11px] text-neutral-500">{fmt(e.ts)}</div>
                 </div>
               ))}
-              {!data?.events?.length ? (
-                <div className="text-sm text-neutral-500">尚無資料（等第一次 refresh 成功後會出現）。</div>
-              ) : null}
+              {!data?.events?.length ? <div className="text-sm text-neutral-500">尚無資料（等第一次 refresh 成功）。</div> : null}
             </div>
           </div>
         </div>
@@ -246,9 +240,7 @@ export default function Page() {
                 </div>
               </a>
             ))}
-            {!data?.recentVods?.length ? (
-              <div className="text-sm text-neutral-500">尚無資料（等第一次 refresh 成功）。</div>
-            ) : null}
+            {!data?.recentVods?.length ? <div className="text-sm text-neutral-500">尚無資料（等第一次 refresh 成功）。</div> : null}
           </div>
         </div>
       </div>
