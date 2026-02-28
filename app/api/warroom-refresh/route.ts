@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { kv } from "@vercel/kv";
-import type { WarroomPayload } from "@/lib/types";
-import { getUserByLogin, getStreamByUserId, getRecentVideosByUserId } from "@/lib/twitch";
-import { buildVodTrend30d, buildEvents } from "@/lib/compute";
+import type { WarroomPayload } from "../../../lib/types";
+import { getUserByLogin, getStreamByUserId, getRecentVideosByUserId } from "../../../lib/twitch";
+import { buildVodTrend30d, buildEvents } from "../../../lib/compute";
 
 const DATA_KEY = "warroom:latest";
 const UPDATED_KEY = "warroom:updatedAt";
@@ -12,8 +12,10 @@ const REFRESH_LOCK_KEY = "warroom:refresh_lock";
 
 const LOGIN = "wsx70529";
 
-const MIN_REFRESH_INTERVAL_MS = 60_000; // 60 秒內只刷新一次（可調）
-const LOCK_TTL_SECONDS = 25;            // 鎖 TTL 避免卡死
+// 同一分鐘最多一次（可調）
+const MIN_REFRESH_INTERVAL_MS = 60_000;
+// 鎖 TTL（避免卡死）
+const LOCK_TTL_SECONDS = 25;
 
 export const runtime = "nodejs";
 
@@ -70,15 +72,10 @@ async function refreshOnce() {
   const lastMs = (await kv.get(LAST_REFRESH_MS_KEY)) as number | null;
   if (lastMs && now - lastMs < MIN_REFRESH_INTERVAL_MS) {
     const data = (await kv.get(DATA_KEY)) as WarroomPayload | null;
-    return {
-      ok: true,
-      skipped: true,
-      reason: "min_interval",
-      updatedAt: data?.updatedAt ?? null
-    };
+    return { ok: true, skipped: true, reason: "min_interval", updatedAt: data?.updatedAt ?? null };
   }
 
-  // 2) 分散式鎖（同一時間只允許 1 個 refresh）
+  // 2) 分散式鎖
   const lockAcquired = await kv.set(REFRESH_LOCK_KEY, String(now), {
     nx: true,
     ex: LOCK_TTL_SECONDS
@@ -86,12 +83,7 @@ async function refreshOnce() {
 
   if (lockAcquired !== "OK") {
     const data = (await kv.get(DATA_KEY)) as WarroomPayload | null;
-    return {
-      ok: true,
-      skipped: true,
-      reason: "locked",
-      updatedAt: data?.updatedAt ?? null
-    };
+    return { ok: true, skipped: true, reason: "locked", updatedAt: data?.updatedAt ?? null };
   }
 
   try {
