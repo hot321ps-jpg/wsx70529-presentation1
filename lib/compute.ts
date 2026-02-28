@@ -36,6 +36,7 @@ export function buildEvents(args: {
   trend30d: TrendPoint[];
 }): WarroomEvent[] {
   const { updatedAt, isLive, viewerCount, trend30d } = args;
+
   const events: WarroomEvent[] = [];
 
   events.push({
