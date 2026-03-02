@@ -1,6 +1,7 @@
-// app/page.tsx
 "use client";
+
 import { useEffect, useState } from "react";
+// ✅ 使用相對路徑 (往上退一層)
 import type { WarroomPayload } from "../lib/types";
 
 export default function WarRoomPage() {
@@ -27,7 +28,7 @@ export default function WarRoomPage() {
 
   useEffect(() => {
     fetchData(); // 初次載入
-    const interval = setInterval(fetchData, 30000); // 每 30 秒向後端請求一次 (後端會用 KV 擋掉過多的 Twitch 請求)
+    const interval = setInterval(fetchData, 30000); // 每 30 秒向後端請求一次
     return () => clearInterval(interval);
   }, []);
 
@@ -75,11 +76,7 @@ export default function WarRoomPage() {
                     </div>
                     <div className="bg-black/50 px-4 py-2 rounded border border-neutral-800">
                       <span className="text-neutral-500 block text-xs">Viewers</span>
-                      <span className="text-red-400 font-bold">{data?.live?.viewerCount.toLocaleString()}</span>
-                    </div>
-                    <div className="bg-black/50 px-4 py-2 rounded border border-neutral-800">
-                      <span className="text-neutral-500 block text-xs">Uptime</span>
-                      <span className="text-neutral-300">{new Date(data?.live?.startedAt || "").toLocaleTimeString()}</span>
+                      <span className="text-red-400 font-bold">{data?.live?.viewerCount?.toLocaleString()}</span>
                     </div>
                   </div>
                 </div>
