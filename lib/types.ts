@@ -1,38 +1,18 @@
-export type KPI = {
-  isLive: boolean;
-  viewersNow: number;
-  vodCount30d: number;
-  liveDaysEstimate30d: number;
-};
-
-export type TrendPoint = { date: string; value: number };
-
-export type WarroomEvent = {
-  id: string;
-  level: "info" | "warn" | "critical";
-  title: string;
-  detail: string;
-  ts: string;
-};
-
-export type WarroomPayload = {
-  updatedAt: string;
+// lib/types.ts
+export interface WarroomPayload {
   channel: {
+    id: string;
     login: string;
-    userId: string;
     displayName: string;
-    profileImageUrl?: string;
+    profileImageUrl: string;
   };
   live: {
     isLive: boolean;
-    title?: string;
-    gameName?: string;
-    viewerCount?: number;
-    startedAt?: string;
-  };
-  kpis: KPI;
-  trend30d: TrendPoint[];
-  events: WarroomEvent[];
+    title: string;
+    gameName: string;
+    viewerCount: number;
+    startedAt: string;
+  } | null;
   recentVods: Array<{
     id: string;
     title: string;
@@ -41,4 +21,9 @@ export type WarroomPayload = {
     url: string;
     viewCount: number;
   }>;
-};
+  kpis: {
+    vodCount30d: number;
+    liveDaysEstimate30d: number;
+  };
+  updatedAt: string; // ISO 日期字串
+}
