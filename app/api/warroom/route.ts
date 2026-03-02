@@ -1,17 +1,18 @@
-// app/api/warroom/route.ts
 import { NextResponse } from "next/server";
 import { kv } from "@vercel/kv";
-import { Twitch } from "@/lib/twitch";
-import type { WarroomPayload } from "@/lib/types";
 
-const TARGET_LOGIN = "wsx70529"; // 您要監控的頻道 ID
+// 引入型別與 API 函數 (使用相對路徑確保 Vercel 能正確編譯)
+import type { WarroomPayload } from "../../../lib/types";
+import { getUserByLogin, getStreamByUserId, getRecentVideosByUserId } from "../../../lib/twitch";
+
+const TARGET_LOGIN = "wsx70529"; // 您的 Twitch ID
 const CACHE_KEY = "warroom:latest_data";
 const LOCK_KEY = "warroom:refresh_lock";
-const REFRESH_COOLDOWN = 60; // 60 秒內不重複抓取 Twitch
+const REFRESH_COOLDOWN = 60; // 60 秒內不會重複向 Twitch 發送請求
 
 export async function GET() {
   try {
-    // 1. 檢查是否有最新快取
+    // 1. 檢查 KV 中是否有最新的快取資料
     const cachedData = await kv.get<WarroomPayload>(CACHE_KEY);
     const now = Date.now();
     
@@ -23,45 +24,42 @@ export async function GET() {
     // 2. 檢查去重鎖 (避免多人同時訪問時，同時觸發多個 Twitch API 請求)
     const isLocked = await kv.set(LOCK_KEY, "locked", { nx: true, ex: 10 });
     if (!isLocked && cachedData) {
-      // 如果被鎖住了，代表有人正在抓新資料，先回傳舊的頂著用
+      // 如果被鎖住了，代表背景有其他請求正在抓新資料，先回傳舊的頂著用
       return NextResponse.json({ ok: true, source: "cache_locked", data: cachedData });
     }
 
     // 3. 開始向 Twitch 抓取新資料
-    const user = await Twitch.getUser(TARGET_LOGIN);
+    const user = await getUserByLogin(TARGET_LOGIN);
     const [stream, videos] = await Promise.all([
-      Twitch.getStream(user.id),
-      Twitch.getVideos(user.id)
+      getStreamByUserId(user.id),
+      getRecentVideosByUserId(user.id, 20)
     ]);
 
-    // 4. 整理資料格式
+    // 4. 整理資料格式 (這裡的欄位名稱已完全對齊 types.ts)
     const payload: WarroomPayload = {
+      updatedAt: new Date().toISOString(),
       channel: {
-        id: user.id,
+        userId: user.id,                 // ✅ 修正：對應型別的 userId
         login: user.login,
-        displayName: user.display_name,
-        profileImageUrl: user.profile_image_url
+        displayName: user.displayName,   // ✅ 修正：使用駝峰命名
+        profileImageUrl: user.profileImageUrl // ✅ 修正：使用駝峰命名
       },
       live: stream ? {
         isLive: true,
         title: stream.title,
-        gameName: stream.game_name,
-        viewerCount: stream.viewer_count,
-        startedAt: stream.started_at
+        gameName: stream.gameName,
+        viewerCount: stream.viewerCount,
+        startedAt: stream.startedAt
       } : null,
-      recentVods: videos.map((v: any) => ({
-        id: v.id,
-        title: v.title,
-        createdAt: v.created_at,
-        duration: v.duration,
-        url: v.url,
-        viewCount: v.view_count
-      })),
       kpis: {
-        vodCount30d: videos.length, // 簡單估算
-        liveDaysEstimate30d: new Set(videos.map((v: any) => v.created_at.split('T')[0])).size
+        isLive: !!stream,
+        viewersNow: stream?.viewerCount || 0,
+        vodCount30d: videos.length, 
+        liveDaysEstimate30d: new Set(videos.map(v => v.createdAt.split('T')[0])).size
       },
-      updatedAt: new Date().toISOString()
+      trend30d: [],
+      events: [],
+      recentVods: videos
     };
 
     // 5. 更新 KV 快取
